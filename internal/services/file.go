@@ -29,11 +29,12 @@ type UploadResult struct {
 	Expires  time.Time
 }
 
-func (s *FileService) Upload(ctx context.Context, filename string, contentType string, size int64, body io.Reader) (*UploadResult, error) {
+func (s *FileService) Upload(ctx context.Context, filename string, contentType string, size int64, body io.Reader, ttl time.Duration) (*UploadResult, error) {
 	id := generateID()
 	secret := generateSecret()
 
 	now := time.Now()
+	expireTime := now.Add(ttl)
 	f := &repositories.File{
 		ID:            id,
 		Secret:        secret,
@@ -41,7 +42,7 @@ func (s *FileService) Upload(ctx context.Context, filename string, contentType s
 		ContentType:   contentType,
 		Size:          size,
 		CreatedAt:     now,
-		ExpiresAt:     now.Add(s.ttl),
+		ExpiresAt:     expireTime,
 		DownloadCount: 0,
 	}
 
@@ -60,7 +61,7 @@ func (s *FileService) Upload(ctx context.Context, filename string, contentType s
 		Secret:   secret,
 		Filename: filename,
 		Size:     size,
-		Expires:  f.ExpiresAt,
+		Expires:  expireTime,
 	}, nil
 }
 

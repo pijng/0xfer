@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestHealthHandler(t *testing.T) {
@@ -143,7 +144,7 @@ func TestUploadHandlerParseRequest(t *testing.T) {
 			req.Header.Set("Content-Type", tt.contentType)
 
 			handler := &UploadHandler{maxSize: 100} //nolint:exhaustruct
-			filename, contentType, size, _, err := handler.parseRequest(req)
+			filename, contentType, size, _, _, err := handler.parseRequest(req)
 
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -209,7 +210,7 @@ func BenchmarkStringsHasPrefix(b *testing.B) {
 	for _, input := range inputs {
 		b.Run(input.prefix, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				_ = stringsHasPrefix(input.s, input.prefix)
+				_ = strings.HasPrefix(input.s, input.prefix)
 			}
 		})
 	}
@@ -249,7 +250,7 @@ func BenchmarkDeleteHandlerNotFound(b *testing.B) {
 }
 
 func BenchmarkUploadHandlerWrongMethod(b *testing.B) {
-	handler := NewUploadHandler(nil, 100, "http://localhost:2052")
+	handler := NewUploadHandler(nil, 100, "http://localhost:2052", time.Hour)
 
 	methods := []string{http.MethodGet, http.MethodPost, http.MethodDelete}
 

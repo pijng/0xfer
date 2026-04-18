@@ -47,8 +47,8 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("POST /", handlers.NewUploadHandler(fileService, cfg.MaxSize, baseURL))
-	mux.Handle("PUT /", handlers.NewUploadHandler(fileService, cfg.MaxSize, baseURL))
+	mux.Handle("POST /", handlers.NewUploadHandler(fileService, cfg.MaxSize, baseURL, cfg.TTL))
+	mux.Handle("PUT /", handlers.NewUploadHandler(fileService, cfg.MaxSize, baseURL, cfg.TTL))
 	mux.Handle("GET /d/{id}", handlers.NewDownloadHandler(fileService))
 	mux.Handle("DELETE /d/{id}/{secret}", handlers.NewDeleteHandler(fileService))
 	mux.Handle("GET /health", handlers.NewHealthHandler())

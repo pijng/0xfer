@@ -15,7 +15,7 @@ Perfect for:
 
 - Quick file transfers between servers
 - Temporary file sharing within your infrastructure
-- Self-hosted replacement for services like transfer.sh or 0x0.st
+- Self-hosted solution
 
 ## Quick Start
 
@@ -63,6 +63,13 @@ curl -F "file=@myfile.zip" http://localhost:2052/
 
 # Or just POST with body
 curl -X POST --data-binary @myfile.zip http://localhost:2052/
+
+# Upload from remote URL
+curl -F "url=https://example.com/file.zip" http://localhost:2052/
+
+# Custom expiry (shorter than default)
+curl -F "file=@myfile.zip" -F "expires=1h" http://localhost:2052/
+curl -F "file=@myfile.zip" -F "expires=24h" http://localhost:2052/
 ```
 
 Response:
@@ -129,6 +136,9 @@ Each file gets a unique ID (10 chars, ULID) and secret (8 random chars) for secu
 
 ## Features
 
+- **Upload from URL**: fetch files from remote servers (`url=...` parameter)
+- **Custom expiry**: override default TTL (`expires=1h`, `expires=24h`, etc.)
+- **SSRF protection**: blocks requests to private/internal networks
 - **Auto-cleanup**: expired files removed every minute
 - **Sharding**: files distributed across subdirectories (first 2 chars of ID) — avoids Too Many Files issue
 - **Content-Type**: auto-detected from file body

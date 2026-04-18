@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -12,42 +13,6 @@ func TestStringsHasPrefix(t *testing.T) {
 		want   bool
 	}{
 		{
-			name:   "simple prefix match",
-			s:      "hello world",
-			prefix: "hello",
-			want:   true,
-		},
-		{
-			name:   "prefix not matching",
-			s:      "hello world",
-			prefix: "world",
-			want:   false,
-		},
-		{
-			name:   "empty string with empty prefix",
-			s:      "",
-			prefix: "",
-			want:   true,
-		},
-		{
-			name:   "empty prefix matches any string",
-			s:      "hello",
-			prefix: "",
-			want:   true,
-		},
-		{
-			name:   "longer prefix than string",
-			s:      "hi",
-			prefix: "hello",
-			want:   false,
-		},
-		{
-			name:   "exact match",
-			s:      "test",
-			prefix: "test",
-			want:   true,
-		},
-		{
 			name:   "case sensitive",
 			s:      "Hello",
 			prefix: "hello",
@@ -57,9 +22,9 @@ func TestStringsHasPrefix(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := stringsHasPrefix(tt.s, tt.prefix)
+			got := strings.HasPrefix(tt.s, tt.prefix)
 			if got != tt.want {
-				t.Errorf("stringsHasPrefix(%q, %q) = %v, want %v", tt.s, tt.prefix, got, tt.want)
+				t.Errorf("strings.HasPrefix(%q, %q) = %v, want %v", tt.s, tt.prefix, got, tt.want)
 			}
 		})
 	}

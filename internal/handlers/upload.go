@@ -4,29 +4,59 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"0xfer/internal/services"
+	"0xfer/pkg/fetch"
+	"0xfer/pkg/netsec"
 )
 
 type UploadHandler struct {
-	service *services.FileService
-	maxSize int64
-	baseURL string
+	service    *services.FileService
+	maxSize    int64
+	baseURL    string
+	maxTTL     time.Duration
+	httpClient *http.Client
 }
 
-func NewUploadHandler(service *services.FileService, maxSize int64, baseURL string) http.Handler {
-	h := &UploadHandler{service: service, maxSize: maxSize, baseURL: baseURL}
+type UploadOptions struct {
+	URL     string
+	Expires time.Duration // custom expiry override
+}
+
+func NewUploadHandler(service *services.FileService, maxSize int64, baseURL string, maxTTL time.Duration) http.Handler {
+	h := &UploadHandler{
+		service: service,
+		maxSize: maxSize,
+		baseURL: baseURL,
+		maxTTL:  maxTTL,
+		httpClient: &http.Client{ //nolint:exhaustruct
+			Timeout: 1 * time.Minute,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		},
+	}
 
 	return http.HandlerFunc(h.serve)
 }
 
 func (h *UploadHandler) serve(w http.ResponseWriter, r *http.Request) {
-	filename, contentType, size, body, err := h.parseRequest(r)
+	filename, contentType, size, body, opts, err := h.parseRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
 		return
+	}
+
+	if opts.URL != "" {
+		filename, contentType, size, body, err = h.fetchRemote(opts.URL)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("fetchurl: %s", err.Error()), http.StatusBadRequest)
+
+			return
+		}
 	}
 
 	if size > h.maxSize {
@@ -35,7 +65,12 @@ func (h *UploadHandler) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.service.Upload(r.Context(), filename, contentType, size, body)
+	ttl := h.maxTTL
+	if opts.Expires > 0 && opts.Expires < ttl {
+		ttl = opts.Expires
+	}
+
+	result, err := h.service.Upload(r.Context(), filename, contentType, size, body, ttl)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 
@@ -55,11 +90,26 @@ func (h *UploadHandler) serve(w http.ResponseWriter, r *http.Request) {
 		downloadCmd, deleteCmd, expires)
 }
 
-func (h *UploadHandler) parseRequest(r *http.Request) (filename, contentType string, size int64, body io.Reader, err error) {
+func (h *UploadHandler) parseRequest(r *http.Request) (filename, contentType string, size int64, body io.Reader, opts *UploadOptions, err error) {
+	opts = &UploadOptions{} //nolint:exhaustruct
+
+	if err := r.ParseForm(); err == nil {
+		if remoteURL := r.FormValue("url"); remoteURL != "" {
+			opts.URL = remoteURL
+		}
+		if expiry := r.FormValue("expires"); expiry != "" {
+			if d, err := time.ParseDuration(expiry); err == nil {
+				opts.Expires = d
+			}
+		}
+	}
+
 	ct := r.Header.Get("Content-Type")
 
-	if stringsHasPrefix(ct, "multipart/form-data") {
-		return h.parseMultipart(r)
+	if strings.HasPrefix(ct, "multipart/form-data") {
+		name, ct, size, body, err := h.parseMultipart(r)
+
+		return name, ct, size, body, opts, err
 	}
 
 	if len(ct) > 0 && ct != "application/octet-stream" && ct != "multipart/form-data" {
@@ -68,7 +118,7 @@ func (h *UploadHandler) parseRequest(r *http.Request) (filename, contentType str
 		size = r.ContentLength
 		body = r.Body
 
-		return
+		return filename, contentType, size, body, opts, nil
 	}
 
 	filename = "file"
@@ -76,7 +126,7 @@ func (h *UploadHandler) parseRequest(r *http.Request) (filename, contentType str
 	size = r.ContentLength
 	body = r.Body
 
-	return
+	return filename, contentType, size, body, opts, nil
 }
 
 func (h *UploadHandler) parseMultipart(r *http.Request) (filename, contentType string, size int64, body io.Reader, err error) {
@@ -93,8 +143,31 @@ func (h *UploadHandler) parseMultipart(r *http.Request) (filename, contentType s
 	return header.Filename, header.Header.Get("Content-Type"), header.Size, file, nil
 }
 
-func stringsHasPrefix(s, prefix string) bool {
-	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
+func (h *UploadHandler) fetchRemote(remoteURL string) (filename, contentType string, size int64, body io.Reader, err error) {
+	if err := netsec.IsPrivateURL(remoteURL); err != nil {
+		return "", "", 0, nil, fmt.Errorf("url check failed: %w", err)
+	}
+
+	resp, err := h.httpClient.Get(remoteURL)
+	if err != nil {
+		return "", "", 0, nil, fmt.Errorf("fetch: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", "", 0, nil, fmt.Errorf("remote returned: %s", resp.Status)
+	}
+
+	contentType = resp.Header.Get("Content-Type")
+	size = resp.ContentLength
+
+	cd := resp.Header.Get("Content-Disposition")
+	filename = fetch.FilenameFromHeader(cd, remoteURL)
+	if filename == "" {
+		filename = "file"
+	}
+
+	return filename, contentType, size, resp.Body, nil
 }
 
 func formatSize(bytes int64) string {
