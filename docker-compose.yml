@@ -1,0 +1,15 @@
+services:
+  0xfer:
+    build: .
+    ports:
+      - "2052:2052"
+    volumes:
+      - 0xfer-data:/app/data
+    environment:
+      - 0XFER_ADDR=:2052
+      - 0XFER_DATA_DIR=/app/data
+      - 0XFER_MAX_SIZE=25MB
+      - 0XFER_TTL=168h
+
+volumes:
+  0xfer-data:
