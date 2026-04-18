@@ -70,6 +70,9 @@ curl -F "url=https://example.com/file.zip" http://localhost:2052/
 # Custom expiry (shorter than default)
 curl -F "file=@myfile.zip" -F "expires=1h" http://localhost:2052/
 curl -F "file=@myfile.zip" -F "expires=24h" http://localhost:2052/
+
+# Limit max downloads
+curl -F "file=@myfile.zip" -H "Max-Downloads: 1" http://localhost:2052/
 ```
 
 Response:
@@ -138,6 +141,7 @@ Each file gets a unique ID (10 chars, ULID) and secret (8 random chars) for secu
 
 - **Upload from URL**: fetch files from remote servers (`url=...` parameter)
 - **Custom expiry**: override default TTL (`expires=1h`, `expires=24h`, etc.)
+- **Max downloads**: delete after N downloads (`Max-Downloads: 1` header)
 - **SSRF protection**: blocks requests to private/internal networks
 - **Auto-cleanup**: expired files removed every minute
 - **Sharding**: files distributed across subdirectories (first 2 chars of ID) — avoids Too Many Files issue

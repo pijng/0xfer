@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,8 +22,9 @@ type UploadHandler struct {
 }
 
 type UploadOptions struct {
-	URL     string
-	Expires time.Duration // custom expiry override
+	URL          string
+	Expires      time.Duration
+	MaxDownloads int
 }
 
 func NewUploadHandler(service *services.FileService, maxSize int64, baseURL string, maxTTL time.Duration) http.Handler {
@@ -70,7 +72,7 @@ func (h *UploadHandler) serve(w http.ResponseWriter, r *http.Request) {
 		ttl = opts.Expires
 	}
 
-	result, err := h.service.Upload(r.Context(), filename, contentType, size, body, ttl)
+	result, err := h.service.Upload(r.Context(), filename, contentType, size, body, ttl, opts.MaxDownloads)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 
@@ -101,6 +103,12 @@ func (h *UploadHandler) parseRequest(r *http.Request) (filename, contentType str
 			if d, err := time.ParseDuration(expiry); err == nil {
 				opts.Expires = d
 			}
+		}
+	}
+
+	if maxDown := r.Header.Get("Max-Downloads"); maxDown != "" {
+		if n, err := strconv.Atoi(maxDown); err == nil && n > 0 {
+			opts.MaxDownloads = n
 		}
 	}
 

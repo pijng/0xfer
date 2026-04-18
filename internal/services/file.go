@@ -29,21 +29,22 @@ type UploadResult struct {
 	Expires  time.Time
 }
 
-func (s *FileService) Upload(ctx context.Context, filename string, contentType string, size int64, body io.Reader, ttl time.Duration) (*UploadResult, error) {
+func (s *FileService) Upload(ctx context.Context, filename string, contentType string, size int64, body io.Reader, ttl time.Duration, maxDownloads int) (*UploadResult, error) {
 	id := generateID()
 	secret := generateSecret()
 
 	now := time.Now()
 	expireTime := now.Add(ttl)
 	f := &repositories.File{
-		ID:            id,
-		Secret:        secret,
-		Filename:      filename,
-		ContentType:   contentType,
-		Size:          size,
-		CreatedAt:     now,
-		ExpiresAt:     expireTime,
-		DownloadCount: 0,
+		ID:                 id,
+		Secret:             secret,
+		Filename:           filename,
+		ContentType:        contentType,
+		Size:               size,
+		CreatedAt:          now,
+		ExpiresAt:          expireTime,
+		DownloadCount:     0,
+		DownloadsRemaining: maxDownloads,
 	}
 
 	if err := s.fs.Save(id, body); err != nil {
@@ -69,6 +70,16 @@ func (s *FileService) Get(ctx context.Context, id string) (*repositories.File, i
 	f, err := s.db.Get(ctx, id)
 	if err != nil {
 		return nil, nil, fmt.Errorf("get file from db: %w", err)
+	}
+
+	if f.DownloadsRemaining > 0 {
+		decremented, err := s.db.DecrementDownloadsRemaining(ctx, id)
+		if err != nil {
+			return nil, nil, fmt.Errorf("decrement downloads: %w", err)
+		}
+		if !decremented {
+			return nil, nil, repositories.ErrNotFound
+		}
 	}
 
 	file, err := s.fs.Get(id)
