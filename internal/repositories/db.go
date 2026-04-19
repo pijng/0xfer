@@ -22,7 +22,7 @@ type File struct {
 	Size               int64
 	CreatedAt          time.Time
 	ExpiresAt          time.Time
-	DownloadCount     int
+	DownloadCount      int
 	DownloadsRemaining int
 }
 

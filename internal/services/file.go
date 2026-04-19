@@ -7,14 +7,15 @@ import (
 	"io"
 	"time"
 
-	"github.com/oklog/ulid"
 	"0xfer/internal/repositories"
+
+	"github.com/oklog/ulid"
 )
 
 type FileService struct {
-	db     *repositories.DBRepository
-	fs     *repositories.FileRepository
-	ttl    time.Duration
+	db  *repositories.DBRepository
+	fs  *repositories.FileRepository
+	ttl time.Duration
 }
 
 func NewFileService(db *repositories.DBRepository, fs *repositories.FileRepository, ttl time.Duration) *FileService {
@@ -43,7 +44,7 @@ func (s *FileService) Upload(ctx context.Context, filename string, contentType s
 		Size:               size,
 		CreatedAt:          now,
 		ExpiresAt:          expireTime,
-		DownloadCount:     0,
+		DownloadCount:      0,
 		DownloadsRemaining: maxDownloads,
 	}
 
@@ -72,7 +73,7 @@ func (s *FileService) Get(ctx context.Context, id string) (*repositories.File, i
 		return nil, nil, fmt.Errorf("get file from db: %w", err)
 	}
 
-	if f.DownloadsRemaining > 0 {
+	if f.DownloadsRemaining != -1 {
 		decremented, err := s.db.DecrementDownloadsRemaining(ctx, id)
 		if err != nil {
 			return nil, nil, fmt.Errorf("decrement downloads: %w", err)

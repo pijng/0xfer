@@ -1,6 +1,6 @@
 # 0xfer
 
-Minimal file sharing service. Upload files via curl, get a short URL, download the same way. Self-hosted alternative to transfer.sh or 0x0.st.
+Minimal file sharing service. Upload files via curl, get a short URL, download the same way.
 
 [![Go](https://img.shields.io/badge/Go-1.26-blue?style=for-the-badge&logo=go)](https://go.dev/)
 ![SQLite](https://img.shields.io/badge/SQLite-pure%20Go-green?style=for-the-badge&logo=sqlite)

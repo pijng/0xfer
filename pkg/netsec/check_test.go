@@ -61,9 +61,9 @@ func TestIsPrivateIP(t *testing.T) {
 
 func TestIsPrivateURL(t *testing.T) {
 	tests := []struct {
-		name      string
-		url       string
-		wantErr  bool
+		name    string
+		url     string
+		wantErr bool
 	}{
 		{"valid https", "https://google.com", false},
 		{"valid http", "http://example.com", false},

@@ -10,7 +10,7 @@ import (
 
 var (
 	ErrInvalidScheme = errors.New("invalid scheme: must be http or https")
-	ErrPrivateIP    = errors.New("private addresses not allowed")
+	ErrPrivateIP     = errors.New("private addresses not allowed")
 )
 
 func IsPrivateURL(rawURL string) error {
@@ -53,7 +53,7 @@ func IsPrivateURL(rawURL string) error {
 
 func IsPrivateIP(ip net.IP) bool {
 	type cidr struct {
-		mask []byte
+		mask   []byte
 		subnet []byte
 	}
 
