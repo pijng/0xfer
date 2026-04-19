@@ -3,6 +3,7 @@ package handlers
 import (
 	"io"
 	"net/http"
+	"strconv"
 
 	"0xfer/internal/services"
 )
@@ -34,7 +35,7 @@ func (h *DownloadHandler) serve(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = file.Close() }()
 
 	w.Header().Set("Content-Type", f.ContentType)
-	w.Header().Set("Content-Length", formatSize(f.Size))
+	w.Header().Set("Content-Length", strconv.FormatInt(f.Size, 10))
 	w.Header().Set("Content-Disposition", `attachment; filename="`+escapeQuotes(f.Filename)+`"`)
 	w.Header().Set("Cache-Control", "public, max-age=86400")
 	w.Header().Set("Accept-Ranges", "bytes")
